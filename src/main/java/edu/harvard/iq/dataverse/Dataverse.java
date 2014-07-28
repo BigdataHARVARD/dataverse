@@ -147,6 +147,21 @@ public class Dataverse extends DvObjectContainer {
         this.dataverseFacets = dataverseFacets;
     }
 
+    /**
+     * @todo Can we simply append this to @NotNull message for dataverseType?
+     * Trying this yields a compilation error: attribute value must be constant.
+     * We could use ValidationMessages.properties per this answer but how would
+     * be keep it in sync with the enum?
+     * http://stackoverflow.com/questions/4805168/customize-spring-validation-error/4811273#4811273
+     */
+    static final public List<String> getAllowedDataverseTypes() {
+        List<String> allowedTypes = new ArrayList<>();
+        for (DataverseType dvtype : DataverseType.values()) {
+            allowedTypes.add(dvtype.name());
+        }
+        return allowedTypes;
+    }
+
     public String getName() {
         return name;
     }

@@ -9,9 +9,14 @@ import edu.harvard.iq.dataverse.engine.command.AbstractCommand;
 import edu.harvard.iq.dataverse.engine.command.CommandContext;
 import edu.harvard.iq.dataverse.engine.command.RequiredPermissions;
 import edu.harvard.iq.dataverse.engine.command.exception.CommandException;
+import edu.harvard.iq.dataverse.engine.command.exception.IllegalCommandException;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.EnumSet;
+import javax.ejb.EJBException;
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Path;
 
 /**
  * TODO make override the date and user more active, so prevent code errors.
@@ -45,13 +50,33 @@ public class CreateDataverseCommand extends AbstractCommand<Dataverse> {
 		if ( created.getCreator() == null ) {
 			created.setCreator(getUser());
 		}
-                
-                if (created.getDataverseType() == null){
-                    created.setDataverseType(Dataverse.DataverseType.UNCATEGORIZED);
-                }
 		
 		// Save the dataverse
-		Dataverse managedDv = ctxt.dataverses().save(created);
+        Dataverse managedDv = null;
+            try {
+                managedDv = ctxt.dataverses().save(created);
+            } catch (EJBException ex) {
+                Throwable cause = ex;
+                while (cause.getCause() != null) {
+                    cause = cause.getCause();
+                    if (cause instanceof ConstraintViolationException) {
+                        final String dataverseTypeProperty = "dataverseType";
+                        ConstraintViolationException constraintViolationException = (ConstraintViolationException) cause;
+                        for (ConstraintViolation<?> violation : constraintViolationException.getConstraintViolations()) {
+                            String errorMessageFromEntity = violation.getMessage();
+                            Path propertyPath = violation.getPropertyPath();
+                            if (propertyPath != null) {
+                                String propertyPathString = propertyPath.toString();
+                                if (propertyPathString != null) {
+                                    if (propertyPathString.equals(dataverseTypeProperty)) {
+                                        throw new IllegalCommandException(errorMessageFromEntity + " '" + dataverseTypeProperty + "' should be one of: " + Dataverse.getAllowedDataverseTypes(), this);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 		
 		// Create the manager role and assign it to the creator. This can't be done using commands,
 		// as no one is allowed to do anything on the newly created dataverse yet.
