@@ -15,6 +15,9 @@ import edu.harvard.iq.dataverse.engine.command.exception.CommandException;
 import edu.harvard.iq.dataverse.engine.command.exception.IllegalCommandException;
 import edu.harvard.iq.dataverse.engine.command.exception.PermissionException;
 import edu.harvard.iq.dataverse.util.json.JsonParser;
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,8 +27,12 @@ import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+import javax.json.JsonWriter;
+import javax.json.JsonWriterFactory;
+import javax.json.stream.JsonGenerator;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -118,6 +125,27 @@ public abstract class AbstractApiBean {
         return Response.ok().entity(Json.createObjectBuilder()
             .add("status", "OK")
             .add("data", Json.createObjectBuilder().add("message",msg)).build() ).build();
+    }
+
+    /**
+     * Pretty-printed (indented) JSON for use in development. Switch to
+     * {@link #okResponse(String)} for production.
+     */
+    protected Response okResponsePretty(String msg) {
+        JsonArrayBuilder stuff = Json.createArrayBuilder().add(msg);
+        JsonObject jsonObject = Json.createObjectBuilder()
+                .add("status", "OK")
+                .add("data", stuff).build();
+        Map<String, Boolean> config = new HashMap<>();
+        config.put(JsonGenerator.PRETTY_PRINTING, true);
+        JsonWriterFactory jwf = Json.createWriterFactory(config);
+        StringWriter sw = new StringWriter();
+        try (JsonWriter jsonWriter = jwf.createWriter(sw)) {
+            jsonWriter.writeObject(jsonObject);
+        }
+        // return "Content-Type: application/json", not "text/plain"
+        MediaType mediaType = MediaType.APPLICATION_JSON_TYPE;
+        return Response.ok(sw.toString(), mediaType).build();
     }
     
     protected <T> T execCommand( Command<T> com, String messageSeed ) throws FailedCommandResult {

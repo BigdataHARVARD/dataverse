@@ -1,9 +1,15 @@
 package edu.harvard.iq.dataverse.api;
 
 import edu.harvard.iq.dataverse.DataverseUser;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetData;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetException;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetResponse;
+import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
 import static edu.harvard.iq.dataverse.util.json.JsonPrinter.json;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.ejb.EJB;
+import javax.ejb.EJBException;
 import javax.json.Json;
 import javax.json.JsonArrayBuilder;
 import javax.ws.rs.GET;
@@ -21,7 +27,10 @@ import javax.ws.rs.core.Response.Status;
 @Path("users")
 public class Users extends AbstractApiBean {
 	private static final Logger logger = Logger.getLogger(Users.class.getName());
-	
+
+    @EJB
+    PasswordResetServiceBean passwordResetService;
+
 	@GET
 	public Response list() {
 		JsonArrayBuilder bld = Json.createArrayBuilder();
@@ -63,4 +72,27 @@ public class Users extends AbstractApiBean {
 		return okResponse( json(userSvc.createGuestUser()) );
 		
 	}
+
+    @GET
+    @Path("passwordreset/{email}")
+    public Response passwordResetRequest(@PathParam("email") String emailAddress) {
+        try {
+            PasswordResetResponse passwordResetResponse = passwordResetService.requestReset(emailAddress);
+            PasswordResetData passwordResetData = passwordResetResponse.getPasswordResetData();
+            if (passwordResetData != null) {
+                return okResponsePretty("Password reset email has been sent for " + emailAddress
+                        + ". Email found: " + passwordResetResponse.isEmailFound()
+                        + ". User: " + passwordResetData.getDataverseUser().getUserName()
+                        + ". Token create timestamp: " + passwordResetData.getCreated()
+                        + ". Token expiration timestamp: " + passwordResetData.getExpires()
+                        + ". Reset URL: " + passwordResetResponse.getResetUrl());
+            } else {
+                // don't let spammers know if we have the email address on file or not.
+                return okResponsePretty("Password reset email has been sent for " + emailAddress);
+            }
+        } catch (PasswordResetException | EJBException ex) {
+            Throwable cause = ex.getCause();
+            return errorResponse(Status.INTERNAL_SERVER_ERROR, ex + " caused by " + cause);
+        }
+    }
 }
