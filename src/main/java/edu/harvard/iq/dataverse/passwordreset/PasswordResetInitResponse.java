@@ -2,24 +2,24 @@ package edu.harvard.iq.dataverse.passwordreset;
 
 import edu.harvard.iq.dataverse.util.SystemConfig;
 
-public class PasswordResetResponse {
+public class PasswordResetInitResponse {
 
     /**
      * @todo Do we really need emailFound? Just check if passwordResetData is
      * null or not instead?
      */
-    boolean emailFound;
-    String resetUrl;
-    PasswordResetData passwordResetData;
+    private boolean emailFound;
+    private String resetUrl;
+    private PasswordResetData passwordResetData;
 
-    public PasswordResetResponse(boolean emailFound) {
+    public PasswordResetInitResponse(boolean emailFound) {
         this.emailFound = emailFound;
     }
 
-    public PasswordResetResponse(boolean emailFound, PasswordResetData passwordResetData) {
+    public PasswordResetInitResponse(boolean emailFound, PasswordResetData passwordResetData) {
         this.emailFound = emailFound;
         this.passwordResetData = passwordResetData;
-        this.resetUrl = "https://" + System.getProperty(SystemConfig.FQDN) + "/passwordreset/" + passwordResetData.getToken();
+        this.resetUrl = "https://" + System.getProperty(SystemConfig.FQDN) + "/passwordreset.xhtml?token=" + passwordResetData.getToken();
     }
 
     public boolean isEmailFound() {
