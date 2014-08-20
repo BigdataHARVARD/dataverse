@@ -2,6 +2,7 @@ package edu.harvard.iq.dataverse.passwordreset;
 
 import edu.harvard.iq.dataverse.DataverseUser;
 import edu.harvard.iq.dataverse.DataverseUserServiceBean;
+import java.util.List;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
@@ -35,16 +36,25 @@ public class PasswordResetServiceBean {
     public PasswordResetInitResponse requestReset(String emailAddress) throws PasswordResetException {
         DataverseUser user = dataverseUserService.findByEmail(emailAddress);
         if (user != null) {
-            /**
-             * @todo delete any existing tokens for the user
-             */
+            // delete old tokens for the user
+            List<PasswordResetData> oldTokens = findPasswordResetDataByDataverseUser(user);
+            for (PasswordResetData oldToken : oldTokens) {
+                em.remove(oldToken);
+            }
+            // create a fresh token for the user
             PasswordResetData passwordResetData = new PasswordResetData(user);
+            PasswordResetData savedPasswordResetData = null;
             try {
                 em.persist(passwordResetData);
-                em.merge(passwordResetData);
+                savedPasswordResetData = em.merge(passwordResetData);
             } catch (Exception ex) {
                 String msg = "Unable to save token for " + emailAddress;
                 throw new PasswordResetException(msg);
+            }
+            if (savedPasswordResetData != null) {
+                /**
+                 * @todo send email
+                 */
             }
             return new PasswordResetInitResponse(true, passwordResetData);
         } else {
@@ -87,5 +97,12 @@ public class PasswordResetServiceBean {
             logger.info("When looking up " + token + " caught " + ex);
         }
         return passwordResetData;
+    }
+
+    public List<PasswordResetData> findPasswordResetDataByDataverseUser(DataverseUser user) {
+        TypedQuery<PasswordResetData> typedQuery = em.createQuery("SELECT OBJECT(o) FROM PasswordResetData AS o WHERE o.dataverseUser = :user", PasswordResetData.class);
+        typedQuery.setParameter("user", user);
+        List<PasswordResetData> passwordResetDatas = typedQuery.getResultList();
+        return passwordResetDatas;
     }
 }

@@ -63,7 +63,7 @@ public class PasswordResetPage {
         try {
             PasswordResetInitResponse passwordResetInitResponse = passwordResetService.requestReset(emailAddress);
             PasswordResetData passwordResetData = passwordResetInitResponse.getPasswordResetData();
-            if (passwordResetData != null) {
+             if (passwordResetData != null) {
                 DataverseUser user = passwordResetData.getDataverseUser();
                 passwordResetUrl = passwordResetInitResponse.getResetUrl();
                 logger.info("Found account using " + emailAddress + ": " + user.getUserName() + " and sending link " + passwordResetUrl);

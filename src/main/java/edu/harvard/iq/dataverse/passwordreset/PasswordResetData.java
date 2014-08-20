@@ -24,7 +24,8 @@ public class PasswordResetData implements Serializable {
     private String token;
 
     /**
-     * @todo Only allow a given user to have one token at a time.
+     * @todo Is there an annotation to help enforce that a given DataverseUser
+     * can only have one token at a time?
      */
     @OneToOne
     @JoinColumn(nullable = false)
