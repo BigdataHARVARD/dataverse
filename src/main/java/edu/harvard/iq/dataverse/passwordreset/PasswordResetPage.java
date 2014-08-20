@@ -5,6 +5,8 @@ import edu.harvard.iq.dataverse.DataverseUserServiceBean;
 import edu.harvard.iq.dataverse.PasswordEncryption;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
 import javax.faces.view.ViewScoped;
 import javax.inject.Named;
 
@@ -79,17 +81,42 @@ public class PasswordResetPage {
     public void resetPassword() {
         if (user != null) {
             if (newPassword != null) {
+                int minPasswordLength = 8;
+                int maxPasswordLength = 255;
+                boolean forceSpecialChar = false;
+                boolean forceCapitalLetter = false;
+                boolean forceNumber = false;
                 /**
-                 * @todo SANITY CHECKS ON THE PASSWORD! Is is long and complex
-                 * enough?
+                 *
+                 * @todo move the business rules for password complexity (once
+                 * we've defined them in
+                 * https://github.com/IQSS/dataverse/issues/694 ) deeper into
+                 * the system and have all calls to
+                 * DataverseUser.setEncryptedPassword call into the password
+                 * complexity validataion method.
+                 *
+                 * @todo look into why with this combination (minimum 8
+                 * characters but everthing else turned off) the password
+                 * "12345678" is not considered valid.
                  */
-                user.setEncryptedPassword(PasswordEncryption.getInstance().encrypt(newPassword));
-                DataverseUser savedUser = dataverseUserService.save(user);
-                if (savedUser != null) {
+                PasswordValidator validator = PasswordValidator.buildValidator(forceSpecialChar, forceCapitalLetter, forceNumber, minPasswordLength, maxPasswordLength);
+                boolean passwordIsComplexEnough = validator.validatePassword(newPassword);
+                if (passwordIsComplexEnough) {
+                    user.setEncryptedPassword(PasswordEncryption.getInstance().encrypt(newPassword));
+                    DataverseUser savedUser = dataverseUserService.save(user);
+                    if (savedUser != null) {
+                        FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, "Password Reset Successfully", "You have successfully reset your password."));
+                    } else {
+                        FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "Your password was not reset. Please contact support."));
+                    }
+                } else {
                     /**
-                     * @todo Communicate back to user if the reset was
-                     * successful or not.
+                     * @todo Explain *why* the password wasn't complex enough or
+                     * at least enumerate the rules after they've been defined
+                     * in https://github.com/IQSS/dataverse/issues/694
                      */
+                    FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Validation Error", "Password is not complex enough"));
+                    logger.info("password was not complex enough");
                 }
             }
         }
