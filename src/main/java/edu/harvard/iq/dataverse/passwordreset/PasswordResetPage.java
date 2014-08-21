@@ -1,13 +1,14 @@
 package edu.harvard.iq.dataverse.passwordreset;
 
+import edu.harvard.iq.dataverse.DataverseSession;
 import edu.harvard.iq.dataverse.DataverseUser;
 import edu.harvard.iq.dataverse.DataverseUserServiceBean;
-import edu.harvard.iq.dataverse.PasswordEncryption;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
 import javax.faces.application.FacesMessage;
 import javax.faces.context.FacesContext;
 import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
 import javax.inject.Named;
 
 @ViewScoped
@@ -20,6 +21,8 @@ public class PasswordResetPage {
     PasswordResetServiceBean passwordResetService;
     @EJB
     DataverseUserServiceBean dataverseUserService;
+    @Inject
+    DataverseSession session;
 
     /**
      * The unique string used to look up a user and continue the password reset
@@ -78,12 +81,15 @@ public class PasswordResetPage {
         }
     }
 
-    public void resetPassword() {
+    public String resetPassword() {
         PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(user, newPassword, this.token);
         if (response.isChanged()) {
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, response.getMessageSummary(), response.getMessageDetail()));
+            session.setUser(user);
+            return "/dataverse.xhtml?faces-redirect=true";
         } else {
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, response.getMessageSummary(), response.getMessageDetail()));
+            return null;
         }
     }
 
