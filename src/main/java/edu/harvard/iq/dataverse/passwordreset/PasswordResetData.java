@@ -62,6 +62,19 @@ public class PasswordResetData implements Serializable {
 
     }
 
+    public boolean isExpired() {
+        if (this.expires == null) {
+            return true;
+        }
+        long expiresInMilliseconds = this.expires.getTime();
+        long nowInMilliseconds = new Date().getTime();
+        if (nowInMilliseconds > expiresInMilliseconds) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public String getToken() {
         return token;
     }

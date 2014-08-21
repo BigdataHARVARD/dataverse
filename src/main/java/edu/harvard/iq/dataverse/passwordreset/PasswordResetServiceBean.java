@@ -38,6 +38,7 @@ public class PasswordResetServiceBean {
      */
     // inspired by Troy Hunt: Everything you ever wanted to know about building a secure password reset feature - http://www.troyhunt.com/2012/05/everything-you-ever-wanted-to-know.html
     public PasswordResetInitResponse requestReset(String emailAddress) throws PasswordResetException {
+        deleteAllExpiredTokens();
         DataverseUser user = dataverseUserService.findByEmail(emailAddress);
         if (user != null) {
             // delete old tokens for the user
@@ -92,14 +93,23 @@ public class PasswordResetServiceBean {
      * Process the password reset token, allowing the user to reset the password
      * or report on a invalid token.
      *
-     * @param token
+     * @param tokenQueried
      */
-    public PasswordResetExecResponse processToken(String token) {
-        PasswordResetData passwordResetData = findSinglePasswordResetDataByToken(token);
-        /**
-         * @todo make sure token hasn't expired
-         */
-        return new PasswordResetExecResponse(token, passwordResetData);
+    public PasswordResetExecResponse processToken(String tokenQueried) {
+        deleteAllExpiredTokens();
+        PasswordResetExecResponse tokenUnusable = new PasswordResetExecResponse(tokenQueried, null);
+        PasswordResetData passwordResetData = findSinglePasswordResetDataByToken(tokenQueried);
+        if (passwordResetData != null) {
+            if (passwordResetData.isExpired()) {
+                // shouldn't reach here since tokens are being expired above
+                return tokenUnusable;
+            } else {
+                PasswordResetExecResponse goodTokenCanProceed = new PasswordResetExecResponse(tokenQueried, passwordResetData);
+                return goodTokenCanProceed;
+            }
+        } else {
+            return tokenUnusable;
+        }
     }
 
     /**
@@ -123,5 +133,27 @@ public class PasswordResetServiceBean {
         typedQuery.setParameter("user", user);
         List<PasswordResetData> passwordResetDatas = typedQuery.getResultList();
         return passwordResetDatas;
+    }
+
+    public List<PasswordResetData> findAllPasswordResetData() {
+        TypedQuery<PasswordResetData> typedQuery = em.createQuery("SELECT OBJECT(o) FROM PasswordResetData AS o", PasswordResetData.class);
+        List<PasswordResetData> passwordResetDatas = typedQuery.getResultList();
+        return passwordResetDatas;
+    }
+
+    /**
+     * @return The number of tokens deleted.
+     */
+    private long deleteAllExpiredTokens() {
+        long numDeleted = 0;
+        List<PasswordResetData> allData = findAllPasswordResetData();
+        for (PasswordResetData data : allData) {
+            if (data.isExpired()) {
+                em.remove(data);
+                numDeleted++;
+            }
+        }
+        logger.fine("expired tokens deleted: " + numDeleted);
+        return numDeleted;
     }
 }

@@ -63,7 +63,7 @@ public class PasswordResetPage {
         try {
             PasswordResetInitResponse passwordResetInitResponse = passwordResetService.requestReset(emailAddress);
             PasswordResetData passwordResetData = passwordResetInitResponse.getPasswordResetData();
-             if (passwordResetData != null) {
+            if (passwordResetData != null) {
                 DataverseUser user = passwordResetData.getDataverseUser();
                 passwordResetUrl = passwordResetInitResponse.getResetUrl();
                 logger.info("Found account using " + emailAddress + ": " + user.getUserName() + " and sending link " + passwordResetUrl);
@@ -79,6 +79,17 @@ public class PasswordResetPage {
     }
 
     public void resetPassword() {
+        if (user == null) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "User could not be found."));
+            return;
+        }
+        if (newPassword == null) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "New password not provided."));
+            return;
+        }
+        /**
+         * @todo remove these null checks now that the are above
+         */
         if (user != null) {
             if (newPassword != null) {
                 int minPasswordLength = 8;
@@ -105,6 +116,9 @@ public class PasswordResetPage {
                     user.setEncryptedPassword(PasswordEncryption.getInstance().encrypt(newPassword));
                     DataverseUser savedUser = dataverseUserService.save(user);
                     if (savedUser != null) {
+                        /**
+                         * @todo delete token now that it's been used.
+                         */
                         FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, "Password Reset Successfully", "You have successfully reset your password."));
                     } else {
                         FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "Your password was not reset. Please contact support."));

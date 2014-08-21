@@ -128,6 +128,25 @@ public abstract class AbstractApiBean {
     }
 
     /**
+     * Pretty-printed (indented) JSON for use in development.
+     */
+    protected Response okResponsePretty(JsonArrayBuilder bld) {
+        JsonObject jsonObject = Json.createObjectBuilder()
+                .add("status", "OK")
+                .add("data", bld).build();
+        Map<String, Boolean> config = new HashMap<>();
+        config.put(JsonGenerator.PRETTY_PRINTING, true);
+        JsonWriterFactory jwf = Json.createWriterFactory(config);
+        StringWriter sw = new StringWriter();
+        try (JsonWriter jsonWriter = jwf.createWriter(sw)) {
+            jsonWriter.writeObject(jsonObject);
+        }
+        // return "Content-Type: application/json", not "text/plain"
+        MediaType mediaType = MediaType.APPLICATION_JSON_TYPE;
+        return Response.ok(sw.toString(), mediaType).build();
+    }
+
+    /**
      * Pretty-printed (indented) JSON for use in development. Switch to
      * {@link #okResponse(String)} for production.
      */

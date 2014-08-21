@@ -7,6 +7,9 @@ import edu.harvard.iq.dataverse.passwordreset.PasswordResetExecResponse;
 import edu.harvard.iq.dataverse.passwordreset.PasswordResetInitResponse;
 import edu.harvard.iq.dataverse.passwordreset.PasswordResetServiceBean;
 import static edu.harvard.iq.dataverse.util.json.JsonPrinter.json;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -98,6 +101,9 @@ public class Users extends AbstractApiBean {
                 return okResponsePretty("Password reset email has been sent for " + emailAddress);
             }
         } catch (PasswordResetException | EJBException ex) {
+            /**
+             * @todo why are we worried about catching EJBException here?
+             */
             Throwable cause = ex.getCause();
             return errorResponse(Status.INTERNAL_SERVER_ERROR, ex + " caused by " + cause);
         }
@@ -120,4 +126,24 @@ public class Users extends AbstractApiBean {
             return errorResponse(Status.NOT_FOUND, "Token not found: " + token);
         }
     }
+
+    /**
+     * Strictly for debugging. Will be removed or checked with a Permission.
+     *
+     * @todo disable this method
+     */
+    @GET
+    @Path("passwordreset/debug")
+    public Response passwordResetDebug() {
+        List<PasswordResetData> allPasswordResetData = passwordResetService.findAllPasswordResetData();
+        List<String> rows = new ArrayList<>();
+        JsonArrayBuilder jsonArrayBuilder = Json.createArrayBuilder();
+        for (PasswordResetData data : allPasswordResetData) {
+            Timestamp expires = data.getExpires();
+            boolean expired = data.isExpired();
+            jsonArrayBuilder.add(data.getToken() + "|" + expires + "|expired:" + expired + "|" + data.getDataverseUser().getUserName());
+        }
+        return okResponsePretty(jsonArrayBuilder);
+    }
+
 }
