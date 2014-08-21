@@ -12,6 +12,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
+import javax.persistence.Transient;
 
 @Entity
 public class PasswordResetData implements Serializable {
@@ -19,6 +20,12 @@ public class PasswordResetData implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /**
+     * @todo Make this configurable
+     */
+    @Transient
+    private final int minutesUntilTokenExpires = 60;
 
     @Column(nullable = true)
     private String token;
@@ -39,7 +46,7 @@ public class PasswordResetData implements Serializable {
 
     /**
      * This is only here because it has to be: "The class should have a no-arg,
-     * public or protected constructor." Please use the contructor that takes
+     * public or protected constructor." Please use the constructor that takes
      * arguments.
      */
     @Deprecated
@@ -51,11 +58,6 @@ public class PasswordResetData implements Serializable {
         this.token = UUID.randomUUID().toString();
         long nowInMilliseconds = new Date().getTime();
         this.created = new Timestamp(nowInMilliseconds);
-        /**
-         * @todo decide when token should expire. 20 minutes from now? Make this
-         * configurable?
-         */
-        int minutesUntilTokenExpires = 20;
         long ONE_MINUTE_IN_MILLISECONDS = 60000;
         long futureInMilliseconds = nowInMilliseconds + (minutesUntilTokenExpires * ONE_MINUTE_IN_MILLISECONDS);
         this.expires = new Timestamp(new Date(futureInMilliseconds).getTime());
@@ -73,6 +75,10 @@ public class PasswordResetData implements Serializable {
         } else {
             return false;
         }
+    }
+
+    public int getMinutesUntilTokenExpires() {
+        return minutesUntilTokenExpires;
     }
 
     public String getToken() {

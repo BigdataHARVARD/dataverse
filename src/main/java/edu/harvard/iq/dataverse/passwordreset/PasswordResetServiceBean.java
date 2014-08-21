@@ -3,6 +3,7 @@ package edu.harvard.iq.dataverse.passwordreset;
 import edu.harvard.iq.dataverse.DataverseUser;
 import edu.harvard.iq.dataverse.DataverseUserServiceBean;
 import edu.harvard.iq.dataverse.MailServiceBean;
+import edu.harvard.iq.dataverse.PasswordEncryption;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -62,15 +63,23 @@ public class PasswordResetServiceBean {
                  * @todo is the response the best place to store the reset link?
                  */
                 String passwordResetUrl = passwordResetInitResponse.getResetUrl();
-                String userMessage = "Someone (hopefully you) requested a password reset for " + user.getDisplayName() + " (" + user.getUserName() + "):\n\n"
-                        + passwordResetUrl
+                String messageBody = "Hi " + user.getDisplayName() + ",\n\n"
+                        + "Someone, hopefully you, requested a password reset for " + user.getUserName() + ".\n\n"
+                        + "Please click the link below to reset your Dataverse account password:\n\n"
+                        + passwordResetUrl + "\n\n"
+                        + "The link above will only work for the next " + savedPasswordResetData.getMinutesUntilTokenExpires() + " minutes.\n\n"
                         /**
                          * @todo It would be a nice touch to show the IP from
                          * which the password reset originated.
                          */
-                        + "\n\nIf you did not request this password reset, please ignore this email.";
+                        + "Please contact us if you did not request this password reset or need further help.\n\n"
+                        + "Thank you,\n\n"
+                        + "Dataverse Support Team";
                 try {
-                    mailService.sendDoNotReplyMail(emailAddress, "Dataverse password reset for " + user.getDisplayName(), userMessage);
+                    String fromAddress = "do-not-reply@dataverse.org";
+                    String toAddress = emailAddress;
+                    String subject = "Dataverse Password Reset Requested";
+                    mailService.sendMail(fromAddress, toAddress, subject, messageBody);
                 } catch (Exception ex) {
                     /**
                      * @todo get more specific about the exception that's thrown
@@ -155,5 +164,102 @@ public class PasswordResetServiceBean {
         }
         logger.fine("expired tokens deleted: " + numDeleted);
         return numDeleted;
+    }
+
+    public PasswordChangeAttemptResponse attemptPasswordReset(DataverseUser user, String newPassword, String token) {
+
+        final String messageSummarySuccess = "Password Reset Successfully";
+        final String messageDetailSuccess = "";
+
+        // optimistic defaults :)
+        String messageSummary = messageSummarySuccess;
+        String messageDetail = messageDetailSuccess;
+
+        final String messageSummaryFail = "Password Reset Problem";
+        if (user == null) {
+            messageSummary = messageSummaryFail;
+            messageDetail = "User could not be found.";
+            return new PasswordChangeAttemptResponse(false, messageSummary, messageDetail);
+        }
+        if (newPassword == null) {
+            messageSummary = messageSummaryFail;
+            messageDetail = "New password not provided.";
+            return new PasswordChangeAttemptResponse(false, messageSummary, messageDetail);
+        }
+        if (token == null) {
+            logger.info("No token provided... won't be able to delete it. Let the user change the password though.");
+        }
+
+        /**
+         * @todo move these rules deeper into the system
+         */
+        int minPasswordLength = 6;
+        boolean forceNumber = true;
+        boolean forceSpecialChar = false;
+        boolean forceCapitalLetter = false;
+        int maxPasswordLength = 255;
+        /**
+         *
+         * @todo move the business rules for password complexity (once we've
+         * defined them in https://github.com/IQSS/dataverse/issues/694 ) deeper
+         * into the system and have all calls to
+         * DataverseUser.setEncryptedPassword call into the password complexity
+         * validataion method.
+         *
+         * @todo look into why with this combination (minimum 8 characters but
+         * everthing else turned off) the password "12345678" is not considered
+         * valid.
+         */
+        PasswordValidator validator = PasswordValidator.buildValidator(forceSpecialChar, forceCapitalLetter, forceNumber, minPasswordLength, maxPasswordLength);
+        boolean passwordIsComplexEnough = validator.validatePassword(newPassword);
+        if (passwordIsComplexEnough) {
+            user.setEncryptedPassword(PasswordEncryption.getInstance().encrypt(newPassword));
+            DataverseUser savedUser = dataverseUserService.save(user);
+            if (savedUser != null) {
+                messageSummary = messageSummarySuccess;
+                messageDetail = messageDetailSuccess;
+                boolean tokenDeleted = deleteToken(token);
+                if (!tokenDeleted) {
+                    // suboptimal but when it expires it should be deleted
+                    logger.info("token " + token + " for user id " + user.getId() + " was not deleted");
+                }
+                String fromAddress = "do-not-reply@dataverse.org";
+                String toAddress = user.getEmail();
+                String subject = "Dataverse Password Reset Successfully Changed";
+
+                String messageBody = "Hi " + user.getDisplayName() + ",\n\n"
+                        + "Your Dataverse account password was successfully changed.\n\n"
+                        + "Please contact us if you did not request this password reset or need further help.\n\n"
+                        + "Thank you,\n\n"
+                        + "Dataverse Support Team";
+                mailService.sendMail(fromAddress, toAddress, subject, messageBody);
+                return new PasswordChangeAttemptResponse(true, messageSummary, messageDetail);
+            } else {
+                messageSummary = messageSummaryFail;
+                messageDetail = "Your password was not reset. Please contact support.";
+                return new PasswordChangeAttemptResponse(false, messageSummary, messageDetail);
+            }
+        } else {
+            logger.info("password was not complex enough");
+            messageSummary = messageSummaryFail;
+            String extraPasswordRules = "";
+            if (forceNumber) {
+                extraPasswordRules = " At least one number is required.";
+            }
+            messageDetail = "Password is not complex enough. Minimum length is " + minPasswordLength + " characters." + extraPasswordRules;
+            return new PasswordChangeAttemptResponse(false, messageSummary, messageDetail);
+        }
+
+    }
+
+    private boolean deleteToken(String token) {
+        PasswordResetData doomed = findSinglePasswordResetDataByToken(token);
+        try {
+            em.remove(doomed);
+            return true;
+        } catch (Exception ex) {
+            logger.info("Caught exception trying to delete token " + token + " - " + ex);
+            return false;
+        }
     }
 }

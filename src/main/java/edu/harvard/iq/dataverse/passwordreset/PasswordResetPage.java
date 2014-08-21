@@ -79,60 +79,11 @@ public class PasswordResetPage {
     }
 
     public void resetPassword() {
-        if (user == null) {
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "User could not be found."));
-            return;
-        }
-        if (newPassword == null) {
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "New password not provided."));
-            return;
-        }
-        /**
-         * @todo remove these null checks now that the are above
-         */
-        if (user != null) {
-            if (newPassword != null) {
-                int minPasswordLength = 8;
-                int maxPasswordLength = 255;
-                boolean forceSpecialChar = false;
-                boolean forceCapitalLetter = false;
-                boolean forceNumber = false;
-                /**
-                 *
-                 * @todo move the business rules for password complexity (once
-                 * we've defined them in
-                 * https://github.com/IQSS/dataverse/issues/694 ) deeper into
-                 * the system and have all calls to
-                 * DataverseUser.setEncryptedPassword call into the password
-                 * complexity validataion method.
-                 *
-                 * @todo look into why with this combination (minimum 8
-                 * characters but everthing else turned off) the password
-                 * "12345678" is not considered valid.
-                 */
-                PasswordValidator validator = PasswordValidator.buildValidator(forceSpecialChar, forceCapitalLetter, forceNumber, minPasswordLength, maxPasswordLength);
-                boolean passwordIsComplexEnough = validator.validatePassword(newPassword);
-                if (passwordIsComplexEnough) {
-                    user.setEncryptedPassword(PasswordEncryption.getInstance().encrypt(newPassword));
-                    DataverseUser savedUser = dataverseUserService.save(user);
-                    if (savedUser != null) {
-                        /**
-                         * @todo delete token now that it's been used.
-                         */
-                        FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, "Password Reset Successfully", "You have successfully reset your password."));
-                    } else {
-                        FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Error", "Your password was not reset. Please contact support."));
-                    }
-                } else {
-                    /**
-                     * @todo Explain *why* the password wasn't complex enough or
-                     * at least enumerate the rules after they've been defined
-                     * in https://github.com/IQSS/dataverse/issues/694
-                     */
-                    FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Validation Error", "Password is not complex enough"));
-                    logger.info("password was not complex enough");
-                }
-            }
+        PasswordChangeAttemptResponse response = passwordResetService.attemptPasswordReset(user, newPassword, this.token);
+        if (response.isChanged()) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, response.getMessageSummary(), response.getMessageDetail()));
+        } else {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, response.getMessageSummary(), response.getMessageDetail()));
         }
     }
 
