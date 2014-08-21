@@ -206,9 +206,9 @@ public class PasswordResetServiceBean {
          * DataverseUser.setEncryptedPassword call into the password complexity
          * validataion method.
          *
-         * @todo look into why with this combination (minimum 8 characters but
-         * everthing else turned off) the password "12345678" is not considered
-         * valid.
+         * @todo maybe look into why with the combination of minimum 8
+         * characters, max 255 characters, all other rules disabled that the
+         * password "12345678" is not considered valid.
          */
         PasswordValidator validator = PasswordValidator.buildValidator(forceSpecialChar, forceCapitalLetter, forceNumber, minPasswordLength, maxPasswordLength);
         boolean passwordIsComplexEnough = validator.validatePassword(newPassword);

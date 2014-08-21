@@ -57,6 +57,8 @@ public class PasswordResetPage {
             PasswordResetData passwordResetData = passwordResetExecResponse.getPasswordResetData();
             if (passwordResetData != null) {
                 user = passwordResetData.getDataverseUser();
+            } else {
+                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, "Password Reset Token Problem", "The token you are attempting to use is not valid."));
             }
         }
     }
@@ -70,6 +72,7 @@ public class PasswordResetPage {
                 DataverseUser user = passwordResetData.getDataverseUser();
                 passwordResetUrl = passwordResetInitResponse.getResetUrl();
                 logger.info("Found account using " + emailAddress + ": " + user.getUserName() + " and sending link " + passwordResetUrl);
+                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_INFO, "Password Reset Initiated", ""));
             } else {
                 logger.info("Couldn't find account using " + emailAddress);
             }

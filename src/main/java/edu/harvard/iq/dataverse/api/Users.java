@@ -82,6 +82,8 @@ public class Users extends AbstractApiBean {
      * Initiate a password reset request.
      *
      * @param emailAddress
+     *
+     * @todo Should we disable this method? Probably.
      */
     @GET
     @Path("passwordreset/init/{email}")
@@ -113,6 +115,8 @@ public class Users extends AbstractApiBean {
      * Execute a password reset.
      *
      * @param token
+     *
+     * @todo Should we disable this method? Probably.
      */
     @GET
     @Path("passwordreset/exec/{token}")
@@ -128,9 +132,9 @@ public class Users extends AbstractApiBean {
     }
 
     /**
-     * Strictly for debugging. Will be removed or checked with a Permission.
+     * Strictly for debugging.
      *
-     * @todo disable this method
+     * @todo disable this method or do a Permission check.
      */
     @GET
     @Path("passwordreset/debug")
