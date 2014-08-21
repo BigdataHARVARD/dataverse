@@ -2,6 +2,7 @@ package edu.harvard.iq.dataverse.passwordreset;
 
 import edu.harvard.iq.dataverse.DataverseUser;
 import edu.harvard.iq.dataverse.DataverseUserServiceBean;
+import edu.harvard.iq.dataverse.MailServiceBean;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.ejb.EJB;
@@ -21,6 +22,9 @@ public class PasswordResetServiceBean {
 
     @EJB
     DataverseUserServiceBean dataverseUserService;
+
+    @EJB
+    MailServiceBean mailService;
 
     @PersistenceContext(unitName = "VDCNet-ejbPU")
     private EntityManager em;
@@ -52,11 +56,33 @@ public class PasswordResetServiceBean {
                 throw new PasswordResetException(msg);
             }
             if (savedPasswordResetData != null) {
+                PasswordResetInitResponse passwordResetInitResponse = new PasswordResetInitResponse(true, passwordResetData);
                 /**
-                 * @todo send email
+                 * @todo is the response the best place to store the reset link?
                  */
+                String passwordResetUrl = passwordResetInitResponse.getResetUrl();
+                String userMessage = "Someone (hopefully you) requested a password reset for " + user.getDisplayName() + " (" + user.getUserName() + "):\n\n"
+                        + passwordResetUrl
+                        /**
+                         * @todo It would be a nice touch to show the IP from
+                         * which the password reset originated.
+                         */
+                        + "\n\nIf you did not request this password reset, please ignore this email.";
+                try {
+                    mailService.sendDoNotReplyMail(emailAddress, "Dataverse password reset for " + user.getDisplayName(), userMessage);
+                } catch (Exception ex) {
+                    /**
+                     * @todo get more specific about the exception that's thrown
+                     * when `asadmin create-javamail-resource` (or equivalent)
+                     * hasn't been run.
+                     */
+                    throw new PasswordResetException("Problem sending password reset email possibily due to mail server not being configured.");
+                }
+                logger.info("attempted to send mail to " + emailAddress);
+                return passwordResetInitResponse;
+            } else {
+                throw new PasswordResetException("Internal error. Unable to persist password reset token.");
             }
-            return new PasswordResetInitResponse(true, passwordResetData);
         } else {
             return new PasswordResetInitResponse(false);
         }
@@ -69,18 +95,11 @@ public class PasswordResetServiceBean {
      * @param token
      */
     public PasswordResetExecResponse processToken(String token) {
-//        TypedQuery<PasswordResetData> typedQuery = em.createQuery("SELECT OBJECT(o) FROM AuthenticatedUser AS o where o.identifier = :username", PasswordResetData.class);
-//        TypedQuery<PasswordResetData> typedQuery = em.createQuery("SELECT OBJECT(o) FROM PasswordResetData AS o WHERE o.token = :token", PasswordResetData.class);
-//        typedQuery.setParameter("token", token);
-//        try {
-//            PasswordResetData passwordResetData = typedQuery.getSingleResult();
         PasswordResetData passwordResetData = findSinglePasswordResetDataByToken(token);
+        /**
+         * @todo make sure token hasn't expired
+         */
         return new PasswordResetExecResponse(token, passwordResetData);
-//        } catch (NoResultException nre) {
-//            throw new RuntimeException("no result!");
-//        } catch (NonUniqueResultException nure) {
-//            throw new RuntimeException("non unique result");
-//        }
     }
 
     /**
