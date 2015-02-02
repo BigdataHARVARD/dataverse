@@ -29,10 +29,10 @@
 	topicClassVocab	Vocabulary	Provided for specification of the controlled vocabulary in use, e.g., LCSH, MeSH, etc.		text	25	(#VALUE)	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE	topicClassification	citation
 	topicClassVocabURI	Vocabulary URL	Specifies the URL location for the full controlled vocabulary.	Enter full URL, starting with http://	url	26	<a href="#VALUE">#VALUE</a>	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE	topicClassification	citation
 	publication	Related Publication	Publications that use the data from this Dataset.		text	27		FALSE	FALSE	TRUE	FALSE	FALSE	FALSE		citation
-	publicationCitation	Citation	The full bibliographic citation for this related publication.		textbox	28	#VALUE 	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE	publication	citation
-	publicationIDType	ID Type	The type of digital identifier used for this publication (e.g., Digital Object Identifier (DOI)).		text	29	, #VALUE : 	TRUE	TRUE	FALSE	FALSE	FALSE	FALSE	publication	citation
-	publicationIDNumber	ID Number	The identifier for the selected ID type.		text	30	#VALUE 	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE	publication	citation
-	publicationURL	URL	Link to the publication web page (e.g., journal article page, archive record page, or other).	Enter full URL, starting with http://	url	31	<a href="#VALUE">#VALUE</a>	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE	publication	citation
+	publicationCitation	Citation	The full bibliographic citation for this related publication.		textbox	28	#VALUE	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE	publication	citation
+	publicationIDType	ID Type	The type of digital identifier used for this publication (e.g., Digital Object Identifier (DOI)).		text	29	, #VALUE: 	TRUE	TRUE	FALSE	FALSE	FALSE	FALSE	publication	citation
+	publicationIDNumber	ID Number	The identifier for the selected ID type.		text	30	#VALUE	TRUE	FALSE	FALSE	FALSE	FALSE	FALSE	publication	citation
+	publicationURL	URL	Link to the publication web page (e.g., journal article page, archive record page, or other).	Enter full URL, starting with http://	url	31	, <a href="#VALUE">#VALUE</a>	FALSE	FALSE	FALSE	FALSE	FALSE	FALSE	publication	citation
 	notesText	Notes	Additional important information about the Dataset.		textbox	32		FALSE	FALSE	FALSE	FALSE	TRUE	FALSE		citation
 	language	Language	Language of the Dataset		text	33		TRUE	TRUE	TRUE	TRUE	FALSE	FALSE		citation
 	producer	Producer	Person or organization with the financial or administrative responsibility over this Dataset		text	34		FALSE	FALSE	TRUE	FALSE	FALSE	FALSE		citation
